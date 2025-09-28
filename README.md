@@ -28,5 +28,5 @@ This project is a **virtual try-on system** powered by **Gemini API**, **Firebas
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/<username>/ai-clothes-swap-ultimate.git
+git clone https://github.com/egeKsl/ai-clothes-swap-ultimate.git
 cd ai-clothes-swap-ultimate
