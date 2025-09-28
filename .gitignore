@@ -1,24 +1,66 @@
-# Logs
-logs
-*.log
+# =========================================
+# Node.js / TypeScript (Firebase Backend)
+# =========================================
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+package-lock.json
+dist/
+.env.local
 
-node_modules
-dist
-dist-ssr
-*.local
+# Firebase
+.firebase/
+.firebase-tools.json
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# =========================================
+# Flutter Web App
+# =========================================
+# Flutter/Dart/Pub related
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/.generated/
+ios/Flutter/App.framework
+ios/Flutter/engine/
+Generated.xcconfig
+flutter_export_environment.sh
+
+# Android related
+**/android/**/gradle-wrapper.jar
+**/android/.gradle
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+**/android/.idea
+**/android/.settings
+**/android/.classpath
+**/android/.project
+**/android/.gradletasknamecache
+
+# iOS related
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.podspec
+
+# Web build
+frontend/build/
+frontend/.dart_tool/
+
+# =========================================
+# VSCode / IDE
+# =========================================
+.vscode/
+.idea/
+*.iml
+
+# =========================================
+# Mac / Windows
+# =========================================
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
