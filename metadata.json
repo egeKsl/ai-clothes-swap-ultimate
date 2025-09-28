@@ -1,0 +1,5 @@
+{
+  "name": "AI Clothes Swap",
+  "description": "Upload a photo of a person and a piece of clothing. This app uses Gemini to generate an image of the person wearing the selected clothing item.",
+  "requestFramePermissions": []
+}
