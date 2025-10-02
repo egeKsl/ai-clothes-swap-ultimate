@@ -1,0 +1,14 @@
+runConfig:
+  minInstances: 0
+  # maxInstances: 100
+  # concurrency: 80
+  # cpu: 1
+  # memoryMiB: 512
+runConfig:
+  minInstances: 0
+  env:
+    - variable: PORT
+      value: "8080"
+      availability:
+        - BUILD
+        - RUNTIME

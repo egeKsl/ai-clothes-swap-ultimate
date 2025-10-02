@@ -2,15 +2,13 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_core/firebase_core.dart'; // REQUIRED for Firebase
-import 'package:cloud_functions/cloud_functions.dart'; // REQUIRED for Functions
-import 'firebase_options.dart'; // REQUIRED for Firebase initialization
+import 'package:http/http.dart' as http; // HTTP istekleri için
 import 'package:flutter/foundation.dart';
 
 // SADECE WEB İÇİN: flutter/foundation kütüphanesi ile kontrol edilerek import edilir
 import 'dart:html' as html;
 
-// Data structure expected by the Firebase Function
+// Data structure expected by the REST API
 class ImageFile {
   final String base64;
   final String mimeType;
@@ -43,13 +41,7 @@ const Map<int, Color> _deepPurpleMap = {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  if (kDebugMode) {
-    FirebaseFunctions.instance.useFunctionsEmulator('localhost', 5001);
-  }
-
+  
   runApp(MaterialApp(
     theme: ThemeData(
       primarySwatch: const MaterialColor(_deepPurpleValue, _deepPurpleMap),
@@ -85,39 +77,41 @@ class _TryOnPageState extends State<TryOnPage> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  final FirebaseFunctions _functions = FirebaseFunctions.instance;
+  // ✅ DEĞİŞTİ: Firebase Functions yerine REST API URL'si
+  // Firebase App Hosting URL'sini buraya yaz
+  final String _apiBaseUrl = 'https://backend-ai-server--ai-clothes-swap.us-central1.hosted.app'; // Değiştirilecek
 
 // --- YENİ WEB İNDİRME FONKSİYONU ---
   Future<void> _saveResultImage() async {
-  if (resultImageBytes == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('There is no result image to save.')),
-    );
-    return;
+    if (resultImageBytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('There is no result image to save.')),
+      );
+      return;
+    }
+
+    try {
+      // Web'de, indirmeyi tetiklemek için bir Blob URL oluşturulur
+      final blob = html.Blob([resultImageBytes]);
+      final url = html.Url.createObjectUrlFromBlob(blob);
+
+      // Bir bağlantı (<a> tag) oluşturulur ve tıklama simüle edilir
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute("download", "AI_TryOn_${DateTime.now().millisecondsSinceEpoch}.png")
+        ..click();
+
+      html.Url.revokeObjectUrl(url); // Belleği temizle
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Image downloaded successfully!')),
+      );
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An error occurred while saving the image: $e')),
+      );
+    }
   }
-
-  try {
-    // Web'de, indirmeyi tetiklemek için bir Blob URL oluşturulur
-    final blob = html.Blob([resultImageBytes]);
-    final url = html.Url.createObjectUrlFromBlob(blob);
-
-    // Bir bağlantı (<a> tag) oluşturulur ve tıklama simüle edilir
-    final anchor = html.AnchorElement(href: url)
-      ..setAttribute("download", "AI_TryOn_${DateTime.now().millisecondsSinceEpoch}.png")
-      ..click();
-
-    html.Url.revokeObjectUrl(url); // Belleği temizle
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Image downloaded successfully!')),
-    );
-
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('An error occurred while saving the image: $e')),
-    );
-  }
-}
 
   Future<void> _pickModelImage() async {
     try {
@@ -171,6 +165,7 @@ class _TryOnPageState extends State<TryOnPage> {
     }
   }
 
+  // ✅ DEĞİŞTİ: Cloud Functions yerine REST API çağrısı
   Future<void> _callSwapFunction() async {
     if (_modelImageBytes == null || _clothingImageBytes == null) {
       setState(() {
@@ -200,34 +195,39 @@ class _TryOnPageState extends State<TryOnPage> {
         ).toJson(),
       };
 
-      final HttpsCallable callable = _functions.httpsCallable('swapClothes');
-      final result = await callable.call(dataToSend);
+      // ✅ DEĞİŞTİ: HTTP POST isteği
+      final response = await http.post(
+        Uri.parse('$_apiBaseUrl/swap-clothes'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(dataToSend),
+      );
 
-      final responseData = result.data as Map<String, dynamic>;
-      final imageUrl = responseData['imageUrl'] as String?;
-      final textMessage = responseData['text'] as String?;
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final imageUrl = responseData['imageUrl'] as String?;
+        final textMessage = responseData['text'] as String?;
 
-      if (imageUrl != null && imageUrl.isNotEmpty) {
-        final base64Parts = imageUrl.split(',');
-        final rawBase64 = base64Parts.length > 1 ? base64Parts[1] : base64Parts[0];
+        if (imageUrl != null && imageUrl.isNotEmpty) {
+          final base64Parts = imageUrl.split(',');
+          final rawBase64 = base64Parts.length > 1 ? base64Parts[1] : base64Parts[0];
 
-        setState(() {
-          resultImageBytes = base64Decode(rawBase64);
-        });
+          setState(() {
+            resultImageBytes = base64Decode(rawBase64);
+          });
+        } else {
+          final errorText = textMessage ?? 'AI did not return a valid swapped image.';
+          throw Exception(errorText);
+        }
       } else {
-        final errorText = textMessage ?? 'AI did not return a valid swapped image. Please check Firebase Functions logs.';
-        throw Exception(errorText);
+        throw Exception('Server error: ${response.statusCode} - ${response.body}');
       }
 
-    } on FirebaseFunctionsException catch (e) {
-      debugPrint('Firebase Function Error: ${e.code} - ${e.message}');
-      setState(() {
-        _errorMessage = 'Function Error (${e.code}): ${e.message}';
-      });
     } catch (e) {
-      debugPrint("General Error: $e");
+      debugPrint("API Error: $e");
       setState(() {
-        _errorMessage = 'An unexpected error occurred: $e';
+        _errorMessage = 'An error occurred: $e';
       });
     } finally {
       setState(() {
@@ -243,7 +243,6 @@ class _TryOnPageState extends State<TryOnPage> {
         title: const Text("AI Clothes Swap"),
       ),
 
-      // DÜZELTME: body widget'ını SingleChildScrollView ile sarmalıyoruz
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -376,14 +375,10 @@ class _TryOnPageState extends State<TryOnPage> {
                           backgroundColor: _deepPurple,
                         ),
                       ),
-                      // Alt boşluk eklenir, böylece en alttaki buton da kaydırma alanına girer.
                       const SizedBox(height: 30),
                     ],
                   ),
                 ),
-
-              // Kaldırılan Expanded widget'ı yerine herhangi bir şey eklenmedi.
-
             ],
           ),
         ),

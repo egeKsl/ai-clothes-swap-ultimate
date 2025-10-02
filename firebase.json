@@ -28,5 +28,26 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "apphosting": [
+  {
+    "source": "backend-server",
+    "backendId": "backend-ai-server",
+    "rootDir": "backend-server",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "firebase-debug.log",
+      "firebase-debug.*.log",
+      "functions"
+    ],
+    "deploy": [
+      {
+        "runtime": "nodejs20",
+        "source": "backend-server",
+        "secrets": ["GEMINI_API_KEY"]
+      }
+    ]
   }
+]
 }

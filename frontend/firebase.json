@@ -19,6 +19,15 @@
       "**/node_modules/**"
     ],
     "rewrites": [
+      
+      {
+        "source": "/api/**", 
+        "run": {
+          "serviceId": "ai-clothes-server", 
+          "region": "europe-west4" 
+        }
+      },
+      
       {
         "source": "**",
         "destination": "/index.html"

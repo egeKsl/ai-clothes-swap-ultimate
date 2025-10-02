@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "ai-clothes-swap"
-  }
+    "default": "ai-clothes-swap",
+    "backend-server": "ai-clothes-swap"
+  },
+  "targets": {},
+  "etags": {}
 }
